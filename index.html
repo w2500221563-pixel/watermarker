@@ -1,0 +1,2561 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@600;700&display=swap" rel="stylesheet">
+  <title>图片水印生成器</title>
+  <style>
+    @font-face {
+      font-family: "Watermark Sans";
+      src: url("assets/NotoSansCJKSC-Regular.otf") format("opentype");
+      font-style: normal;
+      font-weight: 100 600;
+      font-display: block;
+    }
+    @font-face {
+      font-family: "Watermark Sans";
+      src: url("assets/NotoSansCJKSC-Bold.otf") format("opentype");
+      font-style: normal;
+      font-weight: 700 900;
+      font-display: block;
+    }
+    @font-face {
+      font-family: "Watermark Latin";
+      src: url("assets/OpenSans-VF.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 300 800;
+      font-display: block;
+    }
+
+    :root {
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      color: #172033;
+      background: #eef2f7;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(255, 193, 7, .13), transparent 28rem),
+        #eef2f7;
+    }
+
+    button, input, select { font: inherit; }
+
+    .app {
+      width: min(1180px, calc(100% - 32px));
+      margin: 28px auto 56px;
+    }
+
+    .hero {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 4vw, 40px);
+      letter-spacing: -.04em;
+    }
+
+    .hero p {
+      max-width: 650px;
+      margin: 8px 0 0;
+      color: #667085;
+      line-height: 1.7;
+    }
+
+    .badge {
+      flex: 0 0 auto;
+      padding: 8px 12px;
+      color: #7a5300;
+      background: #fff2bf;
+      border: 1px solid #f5d56b;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      background: rgba(255,255,255,.96);
+      border: 1px solid #dfe5ee;
+      border-radius: 18px;
+      box-shadow: 0 14px 38px rgba(18, 28, 45, .08);
+    }
+
+    .controls { padding: 20px; }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 17px;
+    }
+
+    .upload {
+      display: grid;
+      place-items: center;
+      min-height: 138px;
+      padding: 20px;
+      border: 2px dashed #c8d1df;
+      border-radius: 14px;
+      background: #f8fafc;
+      text-align: center;
+      cursor: pointer;
+      transition: .18s ease;
+    }
+
+    .upload:hover, .upload.dragging {
+      border-color: #f1b800;
+      background: #fffaf0;
+      transform: translateY(-1px);
+    }
+
+    .upload-icon {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      margin-bottom: 8px;
+      border-radius: 12px;
+      color: #805b00;
+      background: #ffd85a;
+      font-size: 21px;
+      font-weight: 900;
+    }
+
+    .upload strong { display: block; }
+    .upload small { display: block; margin-top: 5px; color: #7a8494; }
+
+    .fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 13px 12px;
+      margin-top: 20px;
+    }
+
+    .field { min-width: 0; }
+    .field.wide { grid-column: 1 / -1; }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #475467;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input[type="text"], input[type="date"], input[type="time"], input[type="number"] {
+      width: 100%;
+      height: 42px;
+      padding: 0 11px;
+      color: #172033;
+      background: #fff;
+      border: 1px solid #ccd5e1;
+      border-radius: 10px;
+      outline: none;
+      transition: .16s ease;
+    }
+
+    input:focus {
+      border-color: #d79f00;
+      box-shadow: 0 0 0 3px rgba(255, 193, 7, .18);
+    }
+
+    .code-row { display: flex; gap: 8px; }
+
+    .batch-status {
+      margin-top: 12px;
+      padding: 11px 12px;
+      border: 1px solid #dfe5ee;
+      border-radius: 11px;
+      background: #f8fafc;
+    }
+
+    .batch-status[hidden] { display: none; }
+
+    .style-panel {
+      margin-top: 12px;
+      padding: 13px;
+      border: 1px solid #d8deea;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .style-panel > label { margin-bottom: 9px; }
+    .style-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .style-option {
+      min-width: 0;
+      padding: 9px;
+      color: #475467;
+      background: #f8fafc;
+      border: 1px solid #ccd5e1;
+      border-radius: 10px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .style-option.active {
+      color: #493400;
+      background: #fff8dc;
+      border-color: #e2b72c;
+      box-shadow: 0 0 0 2px rgba(255, 193, 7, .13);
+    }
+    .style-preview {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      height: 34px;
+      margin-bottom: 7px;
+      padding: 5px 6px;
+      overflow: hidden;
+      color: #fff;
+      background: #172033;
+      border-radius: 6px;
+      font-size: 9px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .style-preview.classic .large { font-size: 17px; }
+    .style-preview.classic .bar { width: 2px; height: 22px; background: #ffc51c; }
+    .style-preview.checkin { align-items: end; }
+    .style-preview.checkin .tag { padding: 3px 4px; color: #111; background: #ffc733; border-radius: 3px; }
+    .style-preview.checkin .clock { padding: 3px 5px; color: #0754a2; background: #f3f8f9; border-radius: 3px; font-size: 13px; }
+    .style-option strong, .style-option small { display: block; }
+    .style-option strong { font-size: 13px; }
+    .style-option small { margin-top: 2px; color: #7a8494; font-size: 11px; }
+
+    .orientation-picker {
+      margin-top: 12px;
+      padding-top: 11px;
+      border-top: 1px solid #d8deea;
+    }
+    .orientation-picker > label { margin-bottom: 7px; }
+    .orientation-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .orientation-option {
+      min-height: 34px;
+      padding: 0 8px;
+      color: #475467;
+      background: #f8fafc;
+      border: 1px solid #ccd5e1;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .orientation-option.active {
+      color: #493400;
+      background: #fff8dc;
+      border-color: #e2b72c;
+    }
+    .orientation-hint { margin: 7px 0 0; color: #7a8494; font-size: 11px; line-height: 1.5; }
+
+    .batch-status-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 9px;
+      color: #344054;
+      font-size: 13px;
+    }
+
+    #batch-current-time { color: #805b00; font-weight: 800; }
+
+    .batch-nav { display: grid; grid-template-columns: 42px 1fr 42px; gap: 7px; }
+    .batch-nav button {
+      min-height: 34px;
+      border: 1px solid #ccd5e1;
+      border-radius: 8px;
+      background: #fff;
+      color: #344054;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .batch-nav button:disabled { opacity: .4; cursor: not-allowed; }
+    #batch-file-name {
+      min-width: 0;
+      padding: 7px 9px;
+      overflow: hidden;
+      color: #667085;
+      background: #fff;
+      border-radius: 8px;
+      font-size: 12px;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .individual-toggle {
+      width: 100%;
+      min-height: 36px;
+      margin-top: 9px;
+      border: 1px solid #e0b52e;
+      border-radius: 8px;
+      color: #5d4300;
+      background: #fff8dc;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .individual-toggle[hidden], .individual-panel[hidden] { display: none; }
+    .individual-toggle.active { color: #fff; background: #805b00; border-color: #805b00; }
+
+    .individual-panel {
+      margin-top: 12px;
+      padding: 13px;
+      border: 1px solid #d7b03a;
+      border-radius: 12px;
+      background: #fffdf4;
+    }
+
+    .individual-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 11px;
+      color: #493400;
+      font-size: 13px;
+    }
+
+    .individual-reset {
+      padding: 6px 9px;
+      border: 1px solid #d6c58b;
+      border-radius: 7px;
+      color: #67572a;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .individual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .individual-field.wide { grid-column: 1 / -1; }
+    .individual-field label { font-size: 12px; }
+    .individual-code-row { display: flex; gap: 7px; }
+    .individual-code-row button { width: 62px; }
+    .individual-hint { margin: 9px 0 0; color: #806b38; font-size: 12px; line-height: 1.5; }
+
+    .interval-panel {
+      grid-column: 1 / -1;
+      padding: 13px;
+      border: 1px solid #f0d477;
+      border-radius: 12px;
+      background: #fffbeb;
+    }
+
+    .interval-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .interval-grid label { font-size: 12px; }
+    .interval-button {
+      height: 42px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 9px;
+      color: #493400;
+      background: #ffd24d;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .interval-hint { margin: 8px 0 0; color: #806b38; font-size: 12px; line-height: 1.5; }
+    .batch-code-button {
+      width: 100%;
+      min-height: 36px;
+      margin-top: 9px;
+      border: 1px solid #ddc46f;
+      border-radius: 8px;
+      color: #5d4300;
+      background: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .small-button {
+      flex: 0 0 auto;
+      width: 64px;
+      border: 0;
+      border-radius: 10px;
+      color: #5d4300;
+      background: #ffd24d;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 42px;
+    }
+
+    input[type="range"] { width: 100%; accent-color: #e3a900; }
+    #opacity-value { width: 38px; color: #667085; font-size: 13px; text-align: right; }
+
+    .group-editor {
+      grid-column: 1 / -1;
+      padding: 13px;
+      border: 1px solid #dfe5ee;
+      border-radius: 12px;
+      background: #f8fafc;
+    }
+
+    .group-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 13px;
+    }
+
+    .group-switch.single { grid-template-columns: 1fr; }
+
+    .group-tab {
+      min-height: 38px;
+      padding: 0 9px;
+      color: #475467;
+      background: #fff;
+      border: 1px solid #ccd5e1;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .group-tab.active {
+      color: #493400;
+      background: #fff2bf;
+      border-color: #e6b51d;
+      box-shadow: 0 0 0 2px rgba(255, 193, 7, .12);
+    }
+
+    .group-scale-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 3px;
+    }
+
+    .group-scale-head label { margin: 0; }
+    #group-scale-value { color: #667085; font-size: 13px; }
+
+    .nudge-pad {
+      display: grid;
+      grid-template-columns: repeat(3, 42px) 1fr;
+      grid-template-rows: repeat(2, 34px);
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .nudge-button, .reset-group {
+      border: 1px solid #ccd5e1;
+      border-radius: 8px;
+      background: #fff;
+      color: #344054;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .nudge-button:hover, .reset-group:hover { border-color: #d79f00; background: #fffaf0; }
+    .nudge-up { grid-column: 2; grid-row: 1; }
+    .nudge-left { grid-column: 1; grid-row: 2; }
+    .nudge-down { grid-column: 2; grid-row: 2; }
+    .nudge-right { grid-column: 3; grid-row: 2; }
+    .reset-group { grid-column: 4; grid-row: 1 / 3; margin-left: 4px; }
+
+    .group-hint {
+      margin: 10px 0 0;
+      color: #7a8494;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .action {
+      min-height: 44px;
+      border: 0;
+      border-radius: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .action.primary { color: #2f2500; background: #ffc51c; }
+    .action.download { color: #fff; background: #172033; }
+    .action.batch { grid-column: 1 / -1; color: #fff; background: #805b00; }
+    .action[hidden] { display: none; }
+    .action:disabled { opacity: .45; cursor: not-allowed; }
+
+    .save-link {
+      display: block;
+      margin-top: 10px;
+      color: #684b00;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .save-link[hidden] { display: none; }
+
+    .notice {
+      margin: 14px 0 0;
+      color: #7a8494;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .preview-card {
+      min-width: 0;
+      padding: 14px;
+      overflow: hidden;
+    }
+
+    .preview-stage {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      min-width: 0;
+      min-height: 520px;
+      overflow: hidden;
+      border-radius: 12px;
+      background:
+        linear-gradient(45deg, #1b2130 25%, transparent 25%),
+        linear-gradient(-45deg, #1b2130 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1b2130 75%),
+        linear-gradient(-45deg, transparent 75%, #1b2130 75%),
+        #242b3a;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+      background-size: 18px 18px;
+    }
+
+    .preview-stage.has-image { min-height: 0; }
+
+    .empty-state {
+      padding: 40px;
+      color: #c9d2e1;
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    #preview-canvas {
+      display: none;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      max-height: 78vh;
+      object-fit: contain;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #preview-canvas.dragging { cursor: grabbing; }
+
+    @media (max-width: 860px) {
+      .hero { align-items: start; }
+      .badge { display: none; }
+      .workspace { grid-template-columns: 1fr; }
+      .preview-stage { min-height: 300px; }
+    }
+
+    @media (max-width: 480px) {
+      .app { width: min(100% - 20px, 1180px); margin-top: 16px; }
+      .fields { grid-template-columns: 1fr; }
+      .field.wide { grid-column: auto; }
+      .style-switch { grid-template-columns: 1fr; }
+      .interval-grid { grid-template-columns: 1fr 1fr; }
+      .interval-button { grid-column: 1 / -1; }
+      .individual-grid { grid-template-columns: 1fr; }
+      .individual-field.wide { grid-column: auto; }
+      .actions { grid-template-columns: 1fr; }
+    }
+
+
+    /* Editorial tool surface: warm paper, crisp ink, one amber action color. */
+    :root {
+      color-scheme: light dark;
+      --page: #f4f1ea;
+      --surface: #fffdf8;
+      --surface-soft: #eeebe4;
+      --surface-raised: #ffffff;
+      --ink: #171713;
+      --muted: #625f58;
+      --muted-2: #77736b;
+      --line: #cfc9bd;
+      --line-strong: #aaa397;
+      --accent: #f1b919;
+      --accent-soft: #fff0ae;
+      --accent-ink: #302300;
+      --dark-action: #20201d;
+      --stage: #20211f;
+      --stage-tile: #292b28;
+      --danger: #9a351f;
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background: var(--page);
+    }
+
+    body {
+      color: var(--ink);
+      background: var(--page);
+    }
+
+    button, input { color: inherit; }
+    button:focus-visible, input:focus-visible, canvas:focus-visible, .upload:focus-within {
+      outline: 3px solid color-mix(in srgb, var(--accent) 62%, transparent);
+      outline-offset: 2px;
+    }
+
+    .app {
+      width: min(1240px, calc(100% - 40px));
+      margin: 36px auto 64px;
+    }
+
+    .hero {
+      align-items: flex-end;
+      margin-bottom: 24px;
+      padding: 0 2px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      max-width: 760px;
+      color: var(--ink);
+      font-family: "Noto Serif SC", "Songti SC", serif;
+      font-size: clamp(31px, 4.3vw, 54px);
+      font-weight: 700;
+      line-height: 1.18;
+      letter-spacing: -.045em;
+    }
+
+    .hero p {
+      max-width: 700px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.75;
+    }
+
+    .badge {
+      padding: 7px 10px;
+      color: var(--accent-ink);
+      background: var(--accent-soft);
+      border: 1px solid color-mix(in srgb, var(--accent) 70%, var(--line));
+      border-radius: 4px;
+      font-size: 12px;
+      letter-spacing: .02em;
+    }
+
+    .workspace {
+      grid-template-columns: minmax(320px, 382px) minmax(0, 1fr);
+      gap: 22px;
+    }
+
+    .card {
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 15px 40px rgba(34, 31, 24, .08);
+    }
+
+    .controls { padding: 22px; }
+    .section-title { color: var(--ink); font-family: "Noto Serif SC", serif; font-size: 20px; }
+
+    .upload {
+      min-height: 142px;
+      color: var(--ink);
+      background: var(--surface-soft);
+      border-color: var(--line-strong);
+      border-radius: 7px;
+      transition: border-color .18s ease, background-color .18s ease;
+    }
+    .upload:hover, .upload.dragging {
+      border-color: #c58c00;
+      background: var(--accent-soft);
+      transform: none;
+    }
+    .upload-icon {
+      width: 40px;
+      height: 40px;
+      color: var(--accent-ink);
+      background: var(--accent);
+      border-radius: 4px;
+      font-size: 23px;
+    }
+    .upload small { color: var(--muted-2); }
+
+    label { color: var(--muted); }
+
+    input[type="text"], input[type="date"], input[type="time"], input[type="number"] {
+      color: var(--ink);
+      background: var(--surface-raised);
+      border-color: var(--line);
+      border-radius: 5px;
+    }
+    input::placeholder { color: var(--muted-2); opacity: .8; }
+    input:focus { border-color: #ba8500; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent); }
+
+    .style-panel, .batch-status, .individual-panel, .interval-panel, .group-editor {
+      background: var(--surface-soft);
+      border-color: var(--line);
+      border-radius: 7px;
+    }
+
+    .style-option, .orientation-option, .batch-nav button, #batch-file-name, .individual-reset,
+    .batch-code-button, .group-tab, .nudge-button, .reset-group {
+      color: var(--ink);
+      background: var(--surface-raised);
+      border-color: var(--line);
+      border-radius: 5px;
+    }
+    .style-option.active, .orientation-option.active, .group-tab.active {
+      color: var(--accent-ink);
+      background: var(--accent-soft);
+      border-color: #c89400;
+      box-shadow: none;
+    }
+    .style-option small, .orientation-hint, .group-hint, .notice, #group-scale-value, #opacity-value, #batch-file-name { color: var(--muted-2); }
+    .style-preview { background: var(--dark-action); border-radius: 3px; }
+
+    .individual-toggle, .interval-button, .small-button {
+      color: var(--accent-ink);
+      background: var(--accent);
+      border-color: #bd8b00;
+      border-radius: 5px;
+    }
+    .individual-toggle.active { color: var(--surface-raised); background: #7d5a00; border-color: #7d5a00; }
+    .individual-head, .individual-hint, .interval-hint, #batch-current-time { color: #765500; }
+
+    input[type="range"] { accent-color: #c58c00; }
+
+    .action { border-radius: 5px; }
+    .action.primary { color: var(--accent-ink); background: var(--accent); }
+    .action.download { color: #fff; background: var(--dark-action); }
+    .action.batch { color: #fff; background: #765500; }
+    .save-link { color: #765500; }
+
+    .preview-card { padding: 10px; }
+    .preview-stage {
+      min-height: 570px;
+      border-radius: 5px;
+      background:
+        linear-gradient(45deg, var(--stage-tile) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--stage-tile) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--stage-tile) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--stage-tile) 75%),
+        var(--stage);
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+      background-size: 18px 18px;
+    }
+    .empty-state { max-width: 360px; color: #d4d4ce; }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page: #141512;
+        --surface: #1c1d19;
+        --surface-soft: #24251f;
+        --surface-raised: #2b2c26;
+        --ink: #f2efe7;
+        --muted: #c1bdb3;
+        --muted-2: #aaa69c;
+        --line: #45473e;
+        --line-strong: #686a5d;
+        --accent: #efbd31;
+        --accent-soft: #45380f;
+        --accent-ink: #fff1be;
+        --dark-action: #ece9df;
+        --stage: #0e0f0d;
+        --stage-tile: #171916;
+      }
+      .card { box-shadow: 0 16px 44px rgba(0,0,0,.22); }
+      .style-preview { color: #fff; background: #080907; }
+      .action.download { color: #151612; background: var(--dark-action); }
+      .individual-head, .individual-hint, .interval-hint, #batch-current-time, .save-link { color: #e4c96f; }
+      .individual-toggle.active, .action.batch { color: #fff; background: #7b5b08; border-color: #9a7714; }
+    }
+
+    @media (max-width: 860px) {
+      .app { width: min(100% - 24px, 760px); margin-top: 22px; }
+      .hero { align-items: flex-start; }
+      .workspace { grid-template-columns: 1fr; }
+      .preview-card { order: -1; }
+      .preview-stage { min-height: 320px; }
+      .controls { padding: 18px; }
+    }
+
+    @media (max-width: 480px) {
+      .app { width: min(100% - 16px, 760px); margin: 14px auto 32px; }
+      .hero { margin-bottom: 14px; padding-bottom: 14px; }
+      h1 { font-size: 30px; letter-spacing: -.035em; }
+      .hero p { font-size: 14px; }
+      .controls { padding: 15px; }
+      .preview-card { padding: 7px; }
+      .preview-stage { min-height: 250px; }
+      .empty-state { padding: 26px; }
+      .nudge-pad { grid-template-columns: repeat(3, 40px) minmax(92px, 1fr); }
+    }
+
+    /* Compact editor layout: preview first, controls grouped by task. */
+    .app {
+      width: min(1440px, calc(100% - 28px));
+      margin: 16px auto 28px;
+    }
+
+    .hero {
+      align-items: center;
+      min-height: 46px;
+      margin-bottom: 12px;
+      padding: 0 2px 10px;
+    }
+
+    h1 {
+      font-family: "Noto Sans SC", "PingFang SC", sans-serif;
+      font-size: clamp(20px, 2.2vw, 28px);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -.025em;
+    }
+
+    .hero p {
+      margin-top: 3px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .badge { padding: 5px 8px; font-size: 11px; }
+
+    .workspace {
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 12px;
+    }
+
+    .preview-card {
+      order: -1;
+      position: sticky;
+      top: 14px;
+      min-height: calc(100vh - 30px);
+      padding: 7px;
+      box-shadow: none;
+    }
+
+    .preview-stage {
+      min-height: calc(100vh - 46px);
+      height: 100%;
+    }
+
+    #preview-canvas { max-height: calc(100vh - 46px); }
+
+    .controls {
+      padding: 12px;
+      box-shadow: none;
+    }
+
+    .section-title {
+      margin: 0 0 8px;
+      font-family: inherit;
+      font-size: 14px;
+    }
+
+    .upload {
+      display: flex;
+      justify-content: center;
+      min-height: 76px;
+      padding: 11px 12px;
+      border-width: 1px;
+    }
+
+    .upload > span {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      column-gap: 10px;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+    }
+
+    .upload-icon {
+      grid-row: 1 / 3;
+      width: 34px;
+      height: 34px;
+      margin: 0;
+      font-size: 19px;
+    }
+
+    .upload strong { font-size: 13px; }
+    .upload small { margin-top: 1px; font-size: 11px; }
+
+    .control-section {
+      margin-top: 8px;
+      border-top: 1px solid var(--line);
+    }
+
+    .control-section > summary,
+    .adjustment-section > summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 0 2px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+    }
+
+    .control-section > summary::-webkit-details-marker,
+    .adjustment-section > summary::-webkit-details-marker { display: none; }
+
+    .control-section > summary small,
+    .adjustment-section > summary small {
+      margin-left: auto;
+      color: var(--muted-2);
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .control-section > summary::after,
+    .adjustment-section > summary::after {
+      content: "⌄";
+      color: var(--muted-2);
+      font-size: 14px;
+      transform: rotate(-90deg);
+      transition: transform .15s ease;
+    }
+
+    .control-section[open] > summary::after,
+    .adjustment-section[open] > summary::after { transform: rotate(0); }
+
+    .style-panel {
+      margin: 0;
+      padding: 4px 0 8px;
+      border: 0;
+      background: transparent;
+    }
+
+    .style-panel > label { display: none; }
+    .style-switch { gap: 6px; }
+    .style-option { padding: 6px; }
+    .style-preview { height: 27px; margin-bottom: 5px; }
+    .style-option strong { font-size: 12px; }
+    .style-option small { display: none; }
+
+    .orientation-picker { margin-top: 8px; padding-top: 8px; }
+    .orientation-picker > label { font-size: 11px; }
+    .orientation-hint { margin-top: 5px; }
+
+    .batch-status,
+    .individual-panel {
+      margin-top: 8px;
+      padding: 9px;
+    }
+
+    .fields {
+      grid-template-columns: 1fr 1fr;
+      gap: 9px 8px;
+      margin-top: 0;
+      padding: 3px 0 8px;
+    }
+
+    .field.wide { grid-column: 1 / -1; }
+    label { margin-bottom: 4px; font-size: 11px; }
+
+    input[type="text"], input[type="date"], input[type="time"], input[type="number"] {
+      height: 36px;
+      padding: 0 9px;
+      font-size: 13px;
+    }
+
+    .small-button { width: 54px; border-radius: 5px; font-size: 12px; }
+
+    .interval-panel {
+      padding: 9px;
+      border-radius: 5px;
+    }
+
+    .interval-grid { gap: 6px; }
+    .interval-button { height: 36px; padding: 0 8px; font-size: 11px; }
+    .interval-hint { margin: 6px 0 0; font-size: 10px; }
+    .batch-code-button { min-height: 32px; margin-top: 7px; }
+
+    .adjustment-section {
+      grid-column: 1 / -1;
+      border-top: 1px solid var(--line);
+    }
+
+    .adjustment-section > summary { min-height: 38px; }
+    .opacity-field { padding: 3px 0 7px; }
+    .range-row { height: 32px; }
+
+    .group-editor {
+      padding: 9px;
+      border-radius: 5px;
+    }
+
+    .group-switch { margin-bottom: 9px; }
+    .group-tab { min-height: 34px; font-size: 12px; }
+    .nudge-pad { margin-top: 7px; }
+    .group-hint { margin-top: 7px; font-size: 10px; }
+
+    .actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 3;
+      gap: 7px;
+      margin-top: 8px;
+      padding-top: 10px;
+      background: linear-gradient(to bottom, transparent, var(--surface) 10px);
+    }
+
+    .action { min-height: 40px; font-size: 13px; }
+    .notice { margin-top: 8px; font-size: 10px; }
+
+    @media (max-width: 900px) {
+      .app { width: min(100% - 20px, 780px); margin-top: 10px; }
+      .workspace { grid-template-columns: 1fr; }
+      .preview-card { position: static; min-height: 0; }
+      .preview-stage { min-height: 300px; height: auto; }
+      #preview-canvas { max-height: 64vh; }
+      .controls { padding: 12px; }
+    }
+
+    @media (max-width: 520px) {
+      .app { width: min(100% - 12px, 780px); margin: 8px auto 20px; }
+      .hero { min-height: 38px; margin-bottom: 8px; padding-bottom: 7px; }
+      h1 { font-size: 19px; }
+      .hero p, .badge { display: none; }
+      .preview-card { padding: 4px; }
+      .preview-stage { min-height: 220px; }
+      .empty-state { padding: 22px; font-size: 13px; }
+      .controls { padding: 10px; }
+      .style-switch { grid-template-columns: 1fr 1fr; }
+      .fields { grid-template-columns: 1fr 1fr; }
+      .field.wide { grid-column: 1 / -1; }
+      .interval-grid { grid-template-columns: 1fr 1fr; }
+      .interval-button { grid-column: 1 / -1; }
+      .individual-grid { grid-template-columns: 1fr 1fr; }
+      .individual-field.wide { grid-column: 1 / -1; }
+      .actions { grid-template-columns: 1fr 1fr; }
+      .nudge-pad { grid-template-columns: repeat(3, 38px) minmax(86px, 1fr); }
+      .control-section > summary small,
+      .adjustment-section > summary small { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="hero">
+      <div>
+        <h1>把时间与地点，清楚地留在照片上</h1>
+        <p>上传照片，选择水印样式，调整文字与位置；完成后按原始尺寸下载，批量照片可一键打包。</p>
+      </div>
+      <span class="badge">支持批量 · 原图尺寸</span>
+    </header>
+
+    <section class="workspace">
+      <aside class="card controls">
+        <h2 class="section-title">先选择照片</h2>
+        <label class="upload" id="upload-area" for="file-input">
+          <span>
+            <span class="upload-icon">＋</span>
+            <strong>选择或拖入一张或多张照片</strong>
+            <small>支持 JPG、PNG、WEBP，可批量处理</small>
+          </span>
+          <input id="file-input" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+        </label>
+
+        <details class="control-section" open>
+          <summary><span>模板与版式</span><small>样式、横竖版</small></summary>
+          <div class="style-panel">
+          <label>水印样式</label>
+          <div class="style-switch" role="radiogroup" aria-label="选择水印样式">
+            <button class="style-option active" type="button" data-style="classic" role="radio" aria-checked="true">
+              <span class="style-preview classic"><span class="large">22:21</span><span class="bar"></span><span>日期天气</span></span>
+              <strong>样式一 · 今日水印</strong>
+              <small>按参考图校准的大时间与品牌标识</small>
+            </button>
+            <button class="style-option" type="button" data-style="checkin" role="radio" aria-checked="false">
+              <span class="style-preview checkin"><span class="tag">打卡</span><span class="clock">23:36</span></span>
+              <strong>样式二 · 打卡卡片</strong>
+              <small>参考图中的左下角样式</small>
+            </button>
+          </div>
+          <div class="orientation-picker">
+            <label>今日水印版式</label>
+            <div class="orientation-switch" role="radiogroup" aria-label="选择今日水印版式">
+              <button class="orientation-option active" type="button" data-orientation="auto" role="radio" aria-checked="true">自动适配</button>
+              <button class="orientation-option" type="button" data-orientation="landscape" role="radio" aria-checked="false">横版</button>
+              <button class="orientation-option" type="button" data-orientation="portrait" role="radio" aria-checked="false">竖版</button>
+            </div>
+            <p class="orientation-hint">自动适配会按照片方向套用横版或竖版；也可手动指定。</p>
+          </div>
+          </div>
+        </details>
+
+        <div class="batch-status" id="batch-status" hidden>
+          <div class="batch-status-head">
+            <strong id="batch-position">第 1 / 1 张</strong>
+            <span id="batch-current-time">--</span>
+          </div>
+          <div class="batch-nav">
+            <button id="previous-image-btn" type="button" aria-label="上一张">←</button>
+            <span id="batch-file-name">--</span>
+            <button id="next-image-btn" type="button" aria-label="下一张">→</button>
+          </div>
+          <button class="individual-toggle" id="individual-edit-btn" type="button" hidden>单独修改当前图片</button>
+        </div>
+
+        <div class="individual-panel" id="individual-panel" hidden>
+          <div class="individual-head">
+            <strong>当前图片独立设置</strong>
+            <button class="individual-reset" id="individual-reset-btn" type="button">恢复批量设置</button>
+          </div>
+          <div class="individual-grid">
+            <div class="individual-field wide">
+              <label for="individual-location">地点</label>
+              <input id="individual-location" type="text">
+            </div>
+            <div class="individual-field">
+              <label for="individual-date">日期</label>
+              <input id="individual-date" type="date">
+            </div>
+            <div class="individual-field">
+              <label for="individual-time">时间</label>
+              <input id="individual-time" type="time">
+            </div>
+            <div class="individual-field">
+              <label for="individual-weekday">星期</label>
+              <input id="individual-weekday" type="text">
+            </div>
+            <div class="individual-field">
+              <label for="individual-weather">天气、温度与风向</label>
+              <input id="individual-weather" type="text">
+            </div>
+            <div class="individual-field wide">
+              <label for="individual-code">防伪码</label>
+              <div class="individual-code-row">
+                <input id="individual-code" type="text" maxlength="20">
+                <button class="small-button" id="individual-random-code-btn" type="button">随机</button>
+              </div>
+            </div>
+          </div>
+          <p class="individual-hint">启用后，文字内容及左右水印组的位置、缩放只影响当前图片。</p>
+        </div>
+
+        <details class="control-section content-section" open>
+          <summary><span>水印内容</span><small>地点、时间、天气</small></summary>
+          <div class="fields">
+          <div class="field wide">
+            <label for="location-input">地点</label>
+            <input id="location-input" type="text" placeholder="例如：上海市静安区">
+          </div>
+          <div class="field">
+            <label for="date-input">首张日期</label>
+            <input id="date-input" type="date">
+          </div>
+          <div class="field">
+            <label for="time-input">首张时间</label>
+            <input id="time-input" type="time" >
+          </div>
+          <div class="interval-panel">
+            <label>批量时间间隔</label>
+            <div class="interval-grid">
+              <div>
+                <label for="interval-min">最少分钟</label>
+                <input id="interval-min" type="number" min="0" max="1440" step="1" value="3">
+              </div>
+              <div>
+                <label for="interval-max">最多分钟</label>
+                <input id="interval-max" type="number" min="0" max="1440" step="1" value="8">
+              </div>
+              <button class="interval-button" id="regenerate-times-btn" type="button">重新生成时间</button>
+            </div>
+            <p class="interval-hint">每张图片会在上一张时间基础上随机增加该区间内的分钟数，跨过午夜时自动更新日期。</p>
+            <button class="batch-code-button" id="regenerate-codes-btn" type="button">重新随机全部防伪码</button>
+          </div>
+          <div class="field">
+            <label for="weekday-input">星期</label>
+            <input id="weekday-input" type="text" >
+          </div>
+          <div class="field">
+            <label for="weather-input">天气、温度与风向</label>
+            <input id="weather-input" type="text" placeholder="例如：多云 19°C，东南风">
+          </div>
+          <div class="field wide">
+            <label for="fake-code">防伪码（批量时每张随机）</label>
+            <div class="code-row">
+              <input id="fake-code" type="text" maxlength="20" >
+              <button class="small-button" id="refresh-code-btn" type="button">刷新</button>
+            </div>
+          </div>
+          <details class="adjustment-section">
+            <summary><span>位置与大小</span><small>透明度、缩放、移动</small></summary>
+            <div class="field wide opacity-field">
+            <label for="watermark-opacity">水印透明度</label>
+            <div class="range-row">
+              <input id="watermark-opacity" type="range" min="0.55" max="1" step="0.05" value="0.95">
+              <span id="opacity-value">95%</span>
+            </div>
+          </div>
+          <div class="group-editor">
+            <label>水印组调整</label>
+            <div class="group-switch" role="group" aria-label="选择水印组">
+              <button class="group-tab active" type="button" data-group="left" aria-pressed="true">左侧信息组</button>
+              <button class="group-tab" type="button" data-group="right" aria-pressed="false">右侧标识组</button>
+            </div>
+            <div class="group-scale-head">
+              <label for="group-scale">等比缩放</label>
+              <span id="group-scale-value">100%</span>
+            </div>
+            <input id="group-scale" type="range" min="0.5" max="1.8" step="0.01" value="1">
+            <div class="nudge-pad" aria-label="移动所选水印组">
+              <button class="nudge-button nudge-up" type="button" data-dx="0" data-dy="-10" aria-label="向上移动">↑</button>
+              <button class="nudge-button nudge-left" type="button" data-dx="-10" data-dy="0" aria-label="向左移动">←</button>
+              <button class="nudge-button nudge-down" type="button" data-dx="0" data-dy="10" aria-label="向下移动">↓</button>
+              <button class="nudge-button nudge-right" type="button" data-dx="10" data-dy="0" aria-label="向右移动">→</button>
+              <button class="reset-group" id="reset-group-btn" type="button">所选组复位</button>
+            </div>
+            <p class="group-hint">选择水印组后，可直接在预览图上拖动；方向键用于精细移动。</p>
+            </div>
+          </details>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button class="action primary" id="apply-btn" type="button" disabled>刷新预览</button>
+          <button class="action download" id="download-btn" type="button" disabled>下载当前图片</button>
+          <button class="action batch" id="batch-download-btn" type="button" hidden>打包下载全部图片</button>
+        </div>
+        <a class="save-link" id="save-link" href="#" hidden>如果未自动下载，点击这里保存</a>
+        <p class="notice">“显示编码”和“相机真实时间”为版式文字，不构成照片真实性或官方防伪证明。</p>
+      </aside>
+
+      <section class="card preview-card" aria-label="水印预览">
+        <div class="preview-stage">
+          <div class="empty-state" id="empty-state">上传照片后，这里会按参考图样式显示水印预览。</div>
+          <canvas id="preview-canvas" tabindex="0" aria-label="水印预览，可拖动所选水印组"></canvas>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const elements = {
+      uploadArea: document.getElementById('upload-area'),
+      fileInput: document.getElementById('file-input'),
+      styleButtons: [...document.querySelectorAll('.style-option')],
+      orientationButtons: [...document.querySelectorAll('.orientation-option')],
+      orientationPicker: document.querySelector('.orientation-picker'),
+      location: document.getElementById('location-input'),
+      date: document.getElementById('date-input'),
+      time: document.getElementById('time-input'),
+      intervalMin: document.getElementById('interval-min'),
+      intervalMax: document.getElementById('interval-max'),
+      regenerateTimes: document.getElementById('regenerate-times-btn'),
+      regenerateCodes: document.getElementById('regenerate-codes-btn'),
+      weekday: document.getElementById('weekday-input'),
+      weather: document.getElementById('weather-input'),
+      code: document.getElementById('fake-code'),
+      refreshCode: document.getElementById('refresh-code-btn'),
+      opacity: document.getElementById('watermark-opacity'),
+      opacityValue: document.getElementById('opacity-value'),
+      groupTabs: [...document.querySelectorAll('.group-tab')],
+      groupSwitch: document.querySelector('.group-switch'),
+      groupScale: document.getElementById('group-scale'),
+      groupScaleValue: document.getElementById('group-scale-value'),
+      nudgeButtons: [...document.querySelectorAll('.nudge-button')],
+      resetGroup: document.getElementById('reset-group-btn'),
+      batchStatus: document.getElementById('batch-status'),
+      batchPosition: document.getElementById('batch-position'),
+      batchCurrentTime: document.getElementById('batch-current-time'),
+      batchFileName: document.getElementById('batch-file-name'),
+      previousImage: document.getElementById('previous-image-btn'),
+      nextImage: document.getElementById('next-image-btn'),
+      individualEdit: document.getElementById('individual-edit-btn'),
+      individualPanel: document.getElementById('individual-panel'),
+      individualReset: document.getElementById('individual-reset-btn'),
+      individualLocation: document.getElementById('individual-location'),
+      individualDate: document.getElementById('individual-date'),
+      individualTime: document.getElementById('individual-time'),
+      individualWeekday: document.getElementById('individual-weekday'),
+      individualWeather: document.getElementById('individual-weather'),
+      individualCode: document.getElementById('individual-code'),
+      individualRandomCode: document.getElementById('individual-random-code-btn'),
+      apply: document.getElementById('apply-btn'),
+      download: document.getElementById('download-btn'),
+      batchDownload: document.getElementById('batch-download-btn'),
+      saveLink: document.getElementById('save-link'),
+      empty: document.getElementById('empty-state'),
+      previewStage: document.querySelector('.preview-stage'),
+      canvas: document.getElementById('preview-canvas')
+    };
+
+    const ctx = elements.canvas.getContext('2d');
+    let sourceImage = null;
+    let sourceFileName = 'photo';
+    let batchItems = [];
+    let currentBatchIndex = 0;
+    let renderFrame = null;
+    let exportUrl = null;
+    let watermarkStyle = 'classic';
+    let templateOrientation = 'auto';
+    let selectedGroup = 'left';
+    let dragState = null;
+    const groupState = {
+      left: { x: 0, y: 0, scale: 1 },
+      right: { x: 0, y: 0, scale: 1 }
+    };
+    const logoTemplate = new Image();
+    let logoTemplateReady = false;
+
+    logoTemplate.onload = () => {
+      logoTemplateReady = true;
+      scheduleRender();
+    };
+    logoTemplate.src = 'assets/classic-brand.png';
+
+    const pad = value => String(value).padStart(2, '0');
+    const today = new Date();
+    elements.date.value = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+    elements.time.value = `${pad(today.getHours())}:${pad(today.getMinutes())}`;
+    elements.weekday.value = `星期${'日一二三四五六'[today.getDay()]}`;
+    elements.code.value = randomCode();
+
+    function randomCode(length = 14) {
+      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+      let result = '';
+      crypto.getRandomValues(new Uint32Array(length)).forEach(value => {
+        result += alphabet[value % alphabet.length];
+      });
+      return result;
+    }
+
+    function setWatermarkStyle(style, shouldRender = true) {
+      watermarkStyle = style === 'checkin' ? 'checkin' : 'classic';
+      elements.styleButtons.forEach(button => {
+        const active = button.dataset.style === watermarkStyle;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-checked', String(active));
+      });
+
+      const leftButton = elements.groupTabs.find(button => button.dataset.group === 'left');
+      const rightButton = elements.groupTabs.find(button => button.dataset.group === 'right');
+      const checkin = watermarkStyle === 'checkin';
+      leftButton.textContent = checkin ? '打卡水印组' : '左侧信息组';
+      rightButton.hidden = checkin;
+      elements.orientationPicker.hidden = checkin;
+      elements.groupSwitch.classList.toggle('single', checkin);
+      if (checkin && selectedGroup === 'right') selectedGroup = 'left';
+      selectGroup(selectedGroup);
+      if (shouldRender) scheduleRender();
+    }
+
+    function setTemplateOrientation(orientation) {
+      templateOrientation = ['landscape', 'portrait'].includes(orientation) ? orientation : 'auto';
+      elements.orientationButtons.forEach(button => {
+        const active = button.dataset.orientation === templateOrientation;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-checked', String(active));
+      });
+      scheduleRender();
+    }
+
+    function resolvedClassicOrientation() {
+      if (templateOrientation === 'portrait' || templateOrientation === 'landscape') return templateOrientation;
+      return elements.canvas.height > elements.canvas.width ? 'portrait' : 'landscape';
+    }
+
+    // The two supplied 1536×2048 / 2048×1536 references use the same
+    // 1536-pixel short-side geometry. Scale from that invariant so an
+    // uploaded reference reproduces its watermark instead of enlarging it.
+    function classicBaseScale() {
+      const width = elements.canvas.width;
+      const height = elements.canvas.height;
+      if (!width || !height) return 1;
+      return Math.min(width, height) / 1536;
+    }
+
+    function randomInteger(minimum, maximum) {
+      if (maximum <= minimum) return minimum;
+      const value = crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
+      return minimum + Math.floor(value * (maximum - minimum + 1));
+    }
+
+    function localDateValue(date) {
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    function localTimeValue(date) {
+      return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function weekdayValue(date) {
+      return `星期${'日一二三四五六'[date.getDay()]}`;
+    }
+
+    function startDateTime() {
+      const dateParts = elements.date.value.split('-').map(Number);
+      const timeParts = elements.time.value.split(':').map(Number);
+      if (dateParts.length !== 3 || timeParts.length < 2 || dateParts.some(Number.isNaN) || timeParts.some(Number.isNaN)) {
+        return null;
+      }
+      return new Date(dateParts[0], dateParts[1] - 1, dateParts[2], timeParts[0], timeParts[1], 0, 0);
+    }
+
+    function copyGroupState(source) {
+      return {
+        left: { ...source.left },
+        right: { ...source.right }
+      };
+    }
+
+    function activeItem() {
+      return batchItems[currentBatchIndex] || null;
+    }
+
+    function activeIndividual() {
+      return activeItem()?.individual || null;
+    }
+
+    function activeGroupState() {
+      return activeIndividual()?.groupState || groupState;
+    }
+
+    function activeContent() {
+      const item = activeItem();
+      const individual = item?.individual;
+      return {
+        location: individual?.location ?? elements.location.value,
+        weather: individual?.weather ?? elements.weather.value,
+        code: individual?.code ?? (batchItems.length > 1 ? item?.watermarkCode : elements.code.value)
+      };
+    }
+
+    function syncIndividualPanel() {
+      const item = activeItem();
+      const individual = item?.individual;
+      elements.individualEdit.hidden = batchItems.length < 2;
+      elements.individualEdit.classList.toggle('active', Boolean(individual));
+      elements.individualEdit.textContent = individual ? '当前图片：单独设置中' : '单独修改当前图片';
+      elements.individualPanel.hidden = !individual;
+      if (!individual) return;
+      elements.individualLocation.value = individual.location;
+      elements.individualDate.value = individual.date;
+      elements.individualTime.value = individual.time;
+      elements.individualWeekday.value = individual.weekday;
+      elements.individualWeather.value = individual.weather;
+      elements.individualCode.value = individual.code;
+    }
+
+    function enableIndividualEditing() {
+      const item = activeItem();
+      if (!item || batchItems.length < 2) return;
+      if (!item.individual) {
+        item.individual = {
+          location: elements.location.value,
+          date: item.watermarkDate,
+          time: item.watermarkTime,
+          weekday: item.watermarkWeekday,
+          weather: elements.weather.value,
+          code: item.watermarkCode,
+          groupState: copyGroupState(groupState)
+        };
+      }
+      syncIndividualPanel();
+      selectGroup(selectedGroup);
+      scheduleRender();
+    }
+
+    function resetIndividualEditing() {
+      const item = activeItem();
+      if (!item?.individual) return;
+      item.individual = null;
+      syncIndividualPanel();
+      selectGroup(selectedGroup);
+      updateBatchStatus();
+      scheduleRender();
+    }
+
+    function updateBatchStatus() {
+      const item = batchItems[currentBatchIndex];
+      elements.batchStatus.hidden = !item;
+      elements.batchDownload.hidden = batchItems.length < 2;
+      elements.batchDownload.textContent = `打包下载全部 ${batchItems.length} 张`;
+      elements.code.disabled = batchItems.length > 1;
+      if (!item) {
+        syncIndividualPanel();
+        return;
+      }
+      const stamp = activeStamp();
+      if (batchItems.length > 1) elements.code.value = activeContent().code || '';
+      elements.batchPosition.textContent = `第 ${currentBatchIndex + 1} / ${batchItems.length} 张`;
+      elements.batchCurrentTime.textContent = `${stamp.date} ${stamp.time}`;
+      elements.batchFileName.textContent = item.file.name;
+      elements.batchFileName.title = item.file.name;
+      elements.previousImage.disabled = currentBatchIndex === 0;
+      elements.nextImage.disabled = currentBatchIndex === batchItems.length - 1;
+      syncIndividualPanel();
+    }
+
+    function generateBatchTimes() {
+      const start = startDateTime();
+      if (!start || !batchItems.length) return;
+      let minimum = Math.max(0, Math.min(1440, Math.round(Number(elements.intervalMin.value) || 0)));
+      let maximum = Math.max(0, Math.min(1440, Math.round(Number(elements.intervalMax.value) || 0)));
+      if (minimum > maximum) [minimum, maximum] = [maximum, minimum];
+      elements.intervalMin.value = minimum;
+      elements.intervalMax.value = maximum;
+
+      const cursor = new Date(start);
+      batchItems.forEach((item, index) => {
+        if (index > 0) cursor.setMinutes(cursor.getMinutes() + randomInteger(minimum, maximum));
+        item.watermarkDate = localDateValue(cursor);
+        item.watermarkTime = localTimeValue(cursor);
+        item.watermarkWeekday = weekdayValue(cursor);
+      });
+      updateBatchStatus();
+      scheduleRender();
+    }
+
+    function activeStamp() {
+      const item = batchItems[currentBatchIndex];
+      const individual = item?.individual;
+      return {
+        date: individual?.date ?? item?.watermarkDate ?? elements.date.value,
+        time: individual?.time ?? item?.watermarkTime ?? elements.time.value,
+        weekday: individual?.weekday ?? (batchItems.length > 1 ? item?.watermarkWeekday : elements.weekday.value)
+      };
+    }
+
+    function font(size, weight = 540) {
+      return `${weight} ${Math.max(8, size)}px "Watermark Latin", "Watermark Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif`;
+    }
+
+    function chineseFont(size, weight = 540) {
+      return `${weight} ${Math.max(8, size)}px "Watermark Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif`;
+    }
+
+    function setWhiteText(size, weight = 500, align = 'left') {
+      ctx.font = font(size, weight);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = align;
+      ctx.textBaseline = 'alphabetic';
+      ctx.shadowColor = 'rgba(0,0,0,.32)';
+      ctx.shadowBlur = Math.max(2, size * .055);
+      ctx.shadowOffsetX = Math.max(1, size * .018);
+      ctx.shadowOffsetY = Math.max(1, size * .022);
+    }
+
+    function fitText(text, maximumWidth, preferredSize, weight = 600, minimumSize = 18) {
+      let size = preferredSize;
+      ctx.font = font(size, weight);
+      while (size > minimumSize && ctx.measureText(text).width > maximumWidth) {
+        size -= 1;
+        ctx.font = font(size, weight);
+      }
+      return size;
+    }
+
+    function fitChineseText(text, maximumWidth, preferredSize, weight = 400, minimumSize = 18) {
+      let size = preferredSize;
+      ctx.font = chineseFont(size, weight);
+      while (size > minimumSize && ctx.measureText(text).width > maximumWidth) {
+        size -= 1;
+        ctx.font = chineseFont(size, weight);
+      }
+      return size;
+    }
+
+    function selectGroup(group) {
+      selectedGroup = group;
+      const layout = activeGroupState();
+      elements.groupTabs.forEach(button => {
+        const active = button.dataset.group === group;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+      elements.groupScale.value = layout[group].scale;
+      elements.groupScaleValue.textContent = `${Math.round(layout[group].scale * 100)}%`;
+    }
+
+    function transformGroup(group, anchorX, anchorY, baseScale, draw) {
+      const state = activeGroupState()[group];
+      ctx.save();
+      ctx.translate(state.x * baseScale, state.y * baseScale);
+      ctx.translate(anchorX, anchorY);
+      ctx.scale(state.scale, state.scale);
+      ctx.translate(-anchorX, -anchorY);
+      draw();
+      ctx.restore();
+    }
+
+    function groupBounds(group) {
+      const width = elements.canvas.width;
+      const height = elements.canvas.height;
+      const checkin = watermarkStyle === 'checkin';
+      if (checkin && group === 'right') return { left: 1, top: 1, right: 0, bottom: 0 };
+      const baseScale = checkin ? width / 1664 : classicBaseScale();
+      const state = activeGroupState()[group];
+      const anchor = group === 'left'
+        ? { x: (checkin ? 30 : 22) * baseScale, y: height - (checkin ? 17 : 35) * baseScale }
+        : { x: width - 12 * baseScale, y: height - 19 * baseScale };
+      const raw = checkin
+        ? { left: 20 * baseScale, top: height - 470 * baseScale, right: Math.min(width, 720 * baseScale), bottom: height }
+        : group === 'left'
+        ? { left: 0, top: height - 390 * baseScale, right: Math.min(width * .76, 1400 * baseScale), bottom: height }
+        : { left: Math.max(0, width - 520 * baseScale), top: height - 300 * baseScale, right: width, bottom: height };
+
+      return {
+        left: anchor.x + (raw.left - anchor.x) * state.scale + state.x * baseScale,
+        top: anchor.y + (raw.top - anchor.y) * state.scale + state.y * baseScale,
+        right: anchor.x + (raw.right - anchor.x) * state.scale + state.x * baseScale,
+        bottom: anchor.y + (raw.bottom - anchor.y) * state.scale + state.y * baseScale
+      };
+    }
+
+    function canvasPoint(event) {
+      const rect = elements.canvas.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left) * elements.canvas.width / rect.width,
+        y: (event.clientY - rect.top) * elements.canvas.height / rect.height
+      };
+    }
+
+    function pointInBounds(point, bounds) {
+      return point.x >= bounds.left && point.x <= bounds.right && point.y >= bounds.top && point.y <= bounds.bottom;
+    }
+
+    function drawBrand(right, baseY, scale) {
+      const brand = '今日水印';
+      const brandSize = 52 * scale;
+      setWhiteText(brandSize, 800, 'right');
+      const brandWidth = ctx.measureText(brand).width;
+      ctx.fillText(brand, right, baseY);
+
+      const iconGap = 12 * scale;
+      const iconW = 49 * scale;
+      const iconX = right - brandWidth - iconGap - iconW;
+      const iconY = baseY - 42 * scale;
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.28)';
+      ctx.shadowBlur = 4 * scale;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(255,255,255,.94)';
+      ctx.lineWidth = 7 * scale;
+      ctx.beginPath();
+      ctx.moveTo(iconX + 3 * scale, iconY + 17 * scale);
+      ctx.lineTo(iconX + iconW * .5, iconY + 2 * scale);
+      ctx.lineTo(iconX + iconW - 3 * scale, iconY + 17 * scale);
+      ctx.stroke();
+      ctx.strokeRect(iconX + 8 * scale, iconY + 17 * scale, iconW - 16 * scale, 24 * scale);
+      ctx.fillStyle = '#f4bc16';
+      ctx.fillRect(iconX + 19 * scale, iconY + 26 * scale, 13 * scale, 7 * scale);
+      ctx.restore();
+    }
+
+    function drawSubBrand(right, baseY, scale) {
+      const prefix = '相机';
+      const highlighted = '真实时间';
+      const size = 34 * scale;
+      ctx.font = font(size, 800);
+      const gap = 11 * scale;
+      const prefixWidth = ctx.measureText(prefix).width;
+      const highlightedWidth = ctx.measureText(highlighted).width;
+      const totalWidth = prefixWidth + gap + highlightedWidth;
+      const startX = right - totalWidth;
+
+      setWhiteText(size, 800, 'left');
+      ctx.fillText(prefix, startX, baseY);
+
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.22)';
+      ctx.shadowBlur = 3 * scale;
+      ctx.fillStyle = 'rgb(194,203,211)';
+      ctx.fillRect(startX + prefixWidth + gap - 4 * scale, baseY - 31 * scale, highlightedWidth + 8 * scale, 38 * scale);
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = '#35383d';
+      ctx.font = font(size, 800);
+      ctx.fillText(highlighted, startX + prefixWidth + gap, baseY);
+      ctx.restore();
+    }
+
+    function drawOriginalBrand(right, height, scale) {
+      // This transparent crop comes directly from the user's clean black
+      // reference. It deliberately excludes the reference code, which is
+      // rendered below from the editable code field.
+      const brandWidth = 380 * scale;
+      const brandHeight = 210 * scale;
+      ctx.drawImage(
+        logoTemplate,
+        right - brandWidth,
+        height - 226 * scale,
+        brandWidth,
+        brandHeight
+      );
+    }
+
+    function drawClassicWatermark() {
+      if (!sourceImage) return;
+
+      const width = elements.canvas.width;
+      const height = elements.canvas.height;
+      const scale = classicBaseScale();
+      const opacity = Number(elements.opacity.value);
+      const timeLeft = 22 * scale;
+      const locationLeft = 32 * scale;
+      const right = width - 12 * scale;
+      const stamp = activeStamp();
+      const content = activeContent();
+
+      // Both supplied references share the same short-side coordinate grid.
+      // Keep text and code baselines separate: the place line sits higher,
+      // while the compact code remains aligned to the lower brand crop.
+      const timeBaseline = height - 156 * scale;
+      const separatorTop = height - 314 * scale;
+      const dateBaseline = height - 248 * scale;
+      const metaBaseline = height - 151 * scale;
+      const locationBaseline = height - 35 * scale;
+      const codeBaseline = height - 19 * scale;
+
+      ctx.save();
+      ctx.globalAlpha = opacity;
+
+      transformGroup('left', timeLeft, locationBaseline, scale, () => {
+        const timeText = stamp.time || '00:00';
+        // The supplied references use Open Sans Bold for the large clock:
+        // its flagged "1" and heavier oval numerals are distinct from the
+        // regular/fallback glyphs that previously made the watermark differ.
+        setWhiteText(179 * scale, 615, 'left');
+        ctx.save();
+        ctx.translate(timeLeft, timeBaseline);
+        ctx.scale(.841, 1);
+        ctx.fillText(timeText, 0, 0);
+        ctx.restore();
+
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,.18)';
+        ctx.shadowBlur = 3 * scale;
+        ctx.fillStyle = '#f5bb18';
+        ctx.fillRect(448 * scale, separatorTop, 15 * scale, 163 * scale);
+        ctx.restore();
+
+        const dateText = stamp.date || '0000-00-00';
+        setWhiteText(84 * scale, 500, 'left');
+        ctx.save();
+        ctx.translate(503 * scale, dateBaseline);
+        ctx.scale(.947, 1);
+        ctx.fillText(dateText, 0, 0);
+        ctx.restore();
+
+        const metaText = `${stamp.weekday || ''} ${content.weather || ''}`.trim();
+        const metaX = 504 * scale;
+        const metaSize = fitChineseText(metaText, Math.max(280 * scale, right - metaX - 390 * scale), 74 * scale, 400, 30 * scale);
+        setWhiteText(metaSize, 400, 'left');
+        ctx.font = chineseFont(metaSize, 400);
+        ctx.save();
+        ctx.translate(metaX, metaBaseline);
+        ctx.scale(.926, 1);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5 * scale;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(metaText, 0, 0);
+        ctx.fillText(metaText, 0, 0);
+        ctx.restore();
+
+        const locationText = content.location || '未填写地点';
+        const locationSize = fitChineseText(locationText, Math.min(width * .72, 1050 * scale), 62 * scale, 400, 28 * scale);
+        setWhiteText(locationSize, 400, 'left');
+        ctx.font = chineseFont(locationSize, 400);
+        ctx.save();
+        ctx.translate(locationLeft, locationBaseline - 2 * scale);
+        ctx.scale(.913, 1);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5 * scale;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(locationText, 0, 0);
+        ctx.fillText(locationText, 0, 0);
+        ctx.restore();
+      });
+
+      transformGroup('right', right, locationBaseline, scale, () => {
+        if (logoTemplateReady) {
+          drawOriginalBrand(right, height, scale);
+        } else {
+          drawBrand(right, height - 154 * scale, scale);
+          drawSubBrand(right, height - 78 * scale, scale);
+        }
+
+        const codeText = content.code || randomCode();
+        setWhiteText(35 * scale, 700, 'right');
+        ctx.fillText(codeText, right, codeBaseline);
+      });
+
+      ctx.restore();
+    }
+
+    function checkinFont(size, weight = 600) {
+      return `${weight} ${Math.max(8, size)}px "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif`;
+    }
+
+    function fitCheckinText(text, maximumWidth, preferredSize, weight = 600, minimumSize = 20) {
+      let size = preferredSize;
+      ctx.font = checkinFont(size, weight);
+      while (size > minimumSize && ctx.measureText(text).width > maximumWidth) {
+        size -= 1;
+        ctx.font = checkinFont(size, weight);
+      }
+      return size;
+    }
+
+    function roundedRectPath(x, y, width, height, radius) {
+      const r = Math.max(0, Math.min(radius, width / 2, height / 2));
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + width - r, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+      ctx.lineTo(x + width, y + height - r);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+      ctx.lineTo(x + r, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function setCheckinText(size, weight = 600, color = '#fff', align = 'left') {
+      ctx.font = checkinFont(size, weight);
+      ctx.fillStyle = color;
+      ctx.textAlign = align;
+      ctx.textBaseline = 'alphabetic';
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+    }
+
+    function drawCheckinCardTexture(x, y, width, height, scale, variant = 'light') {
+      const light = variant === 'light';
+      const coolFine = light ? 'rgba(70,145,178,.20)' : 'rgba(178,125,8,.035)';
+      const warmFine = light ? 'rgba(214,172,104,.08)' : 'rgba(255,244,190,.045)';
+      const coolWave = light ? 'rgba(55,133,170,.44)' : 'rgba(165,111,0,.055)';
+      const warmWave = light ? 'rgba(211,163,91,.16)' : 'rgba(255,247,205,.055)';
+      const spacing = 7 * scale;
+
+      ctx.save();
+      ctx.lineWidth = Math.max(.55, .66 * scale);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      ctx.strokeStyle = coolFine;
+      for (let offset = -height; offset < width + height; offset += spacing) {
+        ctx.beginPath();
+        ctx.moveTo(x + offset, y);
+        ctx.lineTo(x + offset + height, y + height);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = warmFine;
+      for (let offset = -height; offset < width + height; offset += spacing) {
+        ctx.beginPath();
+        ctx.moveTo(x + offset + height, y);
+        ctx.lineTo(x + offset, y + height);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = coolWave;
+      for (let column = -10 * scale; column <= width + 10 * scale; column += 10 * scale) {
+        ctx.beginPath();
+        for (let py = 0; py <= height; py += 2 * scale) {
+          const phase = column / (16 * scale);
+          const px = column
+            + Math.sin(py / (5.5 * scale) + phase) * 5 * scale
+            + Math.sin(py / (2.8 * scale) - phase * .6) * 1.2 * scale;
+          if (py === 0) ctx.moveTo(x + px, y);
+          else ctx.lineTo(x + px, y + py);
+        }
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = warmWave;
+      for (let row = -7 * scale; row <= height + 7 * scale; row += 7 * scale) {
+        ctx.beginPath();
+        for (let px = 0; px <= width; px += 2 * scale) {
+          const phase = row / (12 * scale);
+          const py = row
+            + Math.sin(px / (8 * scale) + phase) * 3.5 * scale
+            + Math.sin(px / (3.4 * scale) - phase * .5) * 1 * scale;
+          if (px === 0) ctx.moveTo(x, y + py);
+          else ctx.lineTo(x + px, y + py);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawCheckinWatermark() {
+      if (!sourceImage) return;
+      const width = elements.canvas.width;
+      const height = elements.canvas.height;
+      const scale = width / 1664;
+      const stamp = activeStamp();
+      const content = activeContent();
+
+      ctx.save();
+      ctx.globalAlpha = Number(elements.opacity.value);
+      transformGroup('left', 30 * scale, height - 17 * scale, scale, () => {
+        const pillX = 29 * scale;
+        const pillY = height - 459 * scale;
+        const pillWidth = 346 * scale;
+        const pillHeight = 104 * scale;
+        const pillRadius = 14 * scale;
+
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, ctx.globalAlpha / .95);
+        ctx.shadowColor = 'rgba(0,0,0,.26)';
+        ctx.shadowBlur = 3 * scale;
+        ctx.shadowOffsetY = 1 * scale;
+        roundedRectPath(pillX, pillY, pillWidth, pillHeight, pillRadius);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.save();
+        roundedRectPath(pillX, pillY, pillWidth, pillHeight, pillRadius);
+        ctx.clip();
+        drawCheckinCardTexture(pillX, pillY, pillWidth, pillHeight, scale, 'light');
+        ctx.restore();
+        roundedRectPath(pillX, pillY, pillWidth, pillHeight, pillRadius);
+        ctx.strokeStyle = 'rgba(150,177,188,.90)';
+        ctx.lineWidth = 2.2 * scale;
+        ctx.stroke();
+        ctx.restore();
+
+        const badgeX = 44 * scale;
+        const badgeY = height - 449 * scale;
+        const badgeWidth = 123 * scale;
+        const badgeHeight = 84 * scale;
+        ctx.save();
+        roundedRectPath(badgeX, badgeY, badgeWidth, badgeHeight, 10 * scale);
+        ctx.fillStyle = '#ffc127';
+        ctx.fill();
+        ctx.save();
+        roundedRectPath(badgeX, badgeY, badgeWidth, badgeHeight, 10 * scale);
+        ctx.clip();
+        drawCheckinCardTexture(badgeX, badgeY, badgeWidth, badgeHeight, scale, 'badge');
+        ctx.restore();
+        ctx.shadowColor = 'transparent';
+        ctx.font = checkinFont(60 * scale, 800);
+        ctx.fillStyle = '#000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.translate(badgeX + badgeWidth / 2, badgeY + badgeHeight * .48);
+        ctx.scale(.94, 1);
+        ctx.fillText('打卡', 0, 0);
+        ctx.restore();
+
+        setCheckinText(64 * scale, 550, '#002f7a', 'left');
+        const timeGradient = ctx.createLinearGradient(
+          0,
+          height - 449 * scale,
+          0,
+          height - 366 * scale
+        );
+        timeGradient.addColorStop(0, '#003b9a');
+        timeGradient.addColorStop(.52, '#002f7f');
+        timeGradient.addColorStop(1, '#00235b');
+        ctx.fillStyle = timeGradient;
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.translate(180 * scale, height - 379 * scale);
+        ctx.scale(.91, 1.22);
+        const timeText = (stamp.time || '00:00').padStart(5, '0').slice(0, 5);
+        const timePositions = [0, 43, 88, 109, 152];
+        [...timeText].forEach((character, index) => {
+          ctx.fillText(character, timePositions[index] * scale, 0);
+        });
+        ctx.restore();
+
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ffc41f';
+        ctx.fillRect(30 * scale, height - 330 * scale, 9 * scale, 242 * scale);
+        ctx.restore();
+
+        const textX = 67 * scale;
+        const locationText = content.location || '未填写地点';
+        const locationSize = fitCheckinText(locationText, (width - textX - 30 * scale) / .92, 52 * scale, 400, 26 * scale);
+        setCheckinText(locationSize, 400);
+        ctx.save();
+        ctx.translate(textX, height - 267 * scale);
+        ctx.scale(.92, 1.08);
+        ctx.fillText(locationText, 0, 0);
+        ctx.restore();
+
+        const dateText = `${(stamp.date || '0000-00-00').replaceAll('-', '.')} ${stamp.weekday || ''}`.trim();
+        const dateSize = fitCheckinText(dateText, width - textX - 30 * scale, 53 * scale, 400, 26 * scale);
+        ctx.font = checkinFont(dateSize, 400);
+        const dateWidth = ctx.measureText(dateText).width * 1.008 + 20 * scale;
+        const dateTop = height - 241 * scale;
+        const dateHeight = 66 * scale;
+        const dateGradient = ctx.createLinearGradient(textX, 0, textX + dateWidth, 0);
+        dateGradient.addColorStop(0, 'rgba(220,160,22,.96)');
+        dateGradient.addColorStop(1, 'rgba(52,36,4,.78)');
+        ctx.save();
+        ctx.fillStyle = dateGradient;
+        ctx.fillRect(textX, dateTop, dateWidth, dateHeight);
+        ctx.restore();
+        setCheckinText(dateSize, 400);
+        ctx.save();
+        ctx.translate(textX + 8 * scale, height - 184 * scale);
+        ctx.scale(1.008, 1);
+        ctx.fillText(dateText, 0, 0);
+        ctx.restore();
+
+        const weatherText = content.weather || '未填写天气';
+        const weatherSize = fitCheckinText(weatherText, (width - textX - 30 * scale) / .95, 53 * scale, 380, 25 * scale);
+        setCheckinText(weatherSize, 380);
+        ctx.save();
+        ctx.translate(textX - 2 * scale, height - 99 * scale);
+        ctx.scale(.94, 1.06);
+        ctx.fillText(weatherText, 0, 0);
+        ctx.restore();
+
+        const iconX = 30 * scale;
+        const iconTop = height - 65 * scale;
+        const iconWidth = 40 * scale;
+        const iconHeight = 47 * scale;
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#aeb1b6';
+        ctx.lineWidth = 3.5 * scale;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(iconX + iconWidth / 2, iconTop);
+        ctx.lineTo(iconX + iconWidth, iconTop + 8 * scale);
+        ctx.lineTo(iconX + iconWidth - 3 * scale, iconTop + 28 * scale);
+        ctx.quadraticCurveTo(iconX + iconWidth / 2, iconTop + iconHeight, iconX + 3 * scale, iconTop + 28 * scale);
+        ctx.lineTo(iconX, iconTop + 8 * scale);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(iconX + 10 * scale, iconTop + 23 * scale);
+        ctx.lineTo(iconX + 17 * scale, iconTop + 30 * scale);
+        ctx.lineTo(iconX + 30 * scale, iconTop + 16 * scale);
+        ctx.stroke();
+        ctx.restore();
+
+        const footerText = '今日水印相机已验证 | 时间地点真实';
+        const footerSize = fitCheckinText(footerText, (width - 85 * scale) / .875, 42 * scale, 400, 22 * scale);
+        setCheckinText(footerSize, 400, '#aeb1b6');
+        ctx.save();
+        ctx.translate(85 * scale, height - 23 * scale);
+        ctx.scale(.875, 1);
+        ctx.fillText(footerText, 0, 0);
+        ctx.restore();
+      });
+      ctx.restore();
+    }
+
+    function drawWatermark() {
+      if (watermarkStyle === 'checkin') drawCheckinWatermark();
+      else drawClassicWatermark();
+    }
+
+    function render() {
+      renderFrame = null;
+      if (!sourceImage) return;
+      ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+      ctx.globalAlpha = 1;
+      ctx.shadowColor = 'transparent';
+      ctx.drawImage(sourceImage, 0, 0, elements.canvas.width, elements.canvas.height);
+      drawWatermark();
+    }
+
+    function scheduleRender() {
+      if (!sourceImage || renderFrame) return;
+      renderFrame = requestAnimationFrame(render);
+    }
+
+    function loadImageFile(file) {
+      return new Promise((resolve, reject) => {
+        const objectUrl = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => resolve({
+          file,
+          image,
+          objectUrl,
+          baseName: file.name.replace(/\.[^.]+$/, '') || 'photo',
+          watermarkDate: '',
+          watermarkTime: '',
+          watermarkWeekday: '',
+          watermarkCode: randomCode(),
+          individual: null
+        });
+        image.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error(`无法读取图片：${file.name}`));
+        };
+        image.src = objectUrl;
+      });
+    }
+
+    function activateBatchItem(index) {
+      if (!batchItems.length) return;
+      currentBatchIndex = Math.max(0, Math.min(batchItems.length - 1, index));
+      const item = batchItems[currentBatchIndex];
+      sourceImage = item.image;
+      sourceFileName = item.baseName;
+      elements.canvas.width = item.image.naturalWidth;
+      elements.canvas.height = item.image.naturalHeight;
+      elements.canvas.style.display = 'block';
+      elements.previewStage.classList.add('has-image');
+      elements.empty.style.display = 'none';
+      elements.apply.disabled = false;
+      elements.download.disabled = false;
+      elements.batchDownload.disabled = false;
+      updateBatchStatus();
+      selectGroup(selectedGroup);
+      render();
+    }
+
+    async function loadFiles(fileList) {
+      const files = [...fileList].filter(file => file.type.startsWith('image/'));
+      if (!files.length) return;
+      if (document.fonts?.load) {
+        await Promise.all([
+          document.fonts.load('400 100px "Watermark Latin"', '2026-10-14'),
+          document.fonts.load('700 100px "Watermark Latin"', '10:09 Z0RT2HFECRWAKI'),
+          document.fonts.load('400 100px "Watermark Sans"', '星期三 多云 厦门市海沧区'),
+          document.fonts.load('500 100px "Watermark Sans"', '相机真实时间'),
+          document.fonts.load('700 100px "Watermark Sans"', '今日水印 防伪')
+        ]).catch(() => {});
+      }
+      const loaded = [];
+      for (const file of files) {
+        try {
+          loaded.push(await loadImageFile(file));
+        } catch (error) {
+          console.warn(error.message);
+        }
+      }
+      if (!loaded.length) return;
+
+      batchItems.forEach(item => URL.revokeObjectURL(item.objectUrl));
+      batchItems = loaded;
+      currentBatchIndex = 0;
+      if (exportUrl) URL.revokeObjectURL(exportUrl);
+      exportUrl = null;
+      elements.saveLink.hidden = true;
+      generateBatchTimes();
+      activateBatchItem(0);
+    }
+
+    function canvasToJpeg() {
+      return new Promise((resolve, reject) => {
+        elements.canvas.toBlob(blob => {
+          if (blob) resolve(blob);
+          else reject(new Error('图片生成失败'));
+        }, 'image/jpeg', .90);
+      });
+    }
+
+    const crcTable = (() => {
+      const table = new Uint32Array(256);
+      for (let index = 0; index < 256; index += 1) {
+        let value = index;
+        for (let bit = 0; bit < 8; bit += 1) {
+          value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+        }
+        table[index] = value >>> 0;
+      }
+      return table;
+    })();
+
+    function crc32(bytes) {
+      let crc = 0xffffffff;
+      for (const byte of bytes) crc = crcTable[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+      return (crc ^ 0xffffffff) >>> 0;
+    }
+
+    function zipClock(date = new Date()) {
+      const year = Math.max(1980, Math.min(2107, date.getFullYear()));
+      return {
+        time: (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2),
+        date: ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate()
+      };
+    }
+
+    function createZip(entries) {
+      const encoder = new TextEncoder();
+      const localParts = [];
+      const centralParts = [];
+      const clock = zipClock();
+      let offset = 0;
+      let centralSize = 0;
+
+      entries.forEach(entry => {
+        const name = encoder.encode(entry.name);
+        const data = entry.data;
+        const checksum = crc32(data);
+        const local = new Uint8Array(30 + name.length);
+        const localView = new DataView(local.buffer);
+        localView.setUint32(0, 0x04034b50, true);
+        localView.setUint16(4, 20, true);
+        localView.setUint16(6, 0x0800, true);
+        localView.setUint16(8, 0, true);
+        localView.setUint16(10, clock.time, true);
+        localView.setUint16(12, clock.date, true);
+        localView.setUint32(14, checksum, true);
+        localView.setUint32(18, data.length, true);
+        localView.setUint32(22, data.length, true);
+        localView.setUint16(26, name.length, true);
+        localView.setUint16(28, 0, true);
+        local.set(name, 30);
+        localParts.push(local, data);
+
+        const central = new Uint8Array(46 + name.length);
+        const centralView = new DataView(central.buffer);
+        centralView.setUint32(0, 0x02014b50, true);
+        centralView.setUint16(4, 20, true);
+        centralView.setUint16(6, 20, true);
+        centralView.setUint16(8, 0x0800, true);
+        centralView.setUint16(10, 0, true);
+        centralView.setUint16(12, clock.time, true);
+        centralView.setUint16(14, clock.date, true);
+        centralView.setUint32(16, checksum, true);
+        centralView.setUint32(20, data.length, true);
+        centralView.setUint32(24, data.length, true);
+        centralView.setUint16(28, name.length, true);
+        centralView.setUint16(30, 0, true);
+        centralView.setUint16(32, 0, true);
+        centralView.setUint16(34, 0, true);
+        centralView.setUint16(36, 0, true);
+        centralView.setUint32(38, 0, true);
+        centralView.setUint32(42, offset, true);
+        central.set(name, 46);
+        centralParts.push(central);
+        centralSize += central.length;
+        offset += local.length + data.length;
+      });
+
+      const end = new Uint8Array(22);
+      const endView = new DataView(end.buffer);
+      endView.setUint32(0, 0x06054b50, true);
+      endView.setUint16(4, 0, true);
+      endView.setUint16(6, 0, true);
+      endView.setUint16(8, entries.length, true);
+      endView.setUint16(10, entries.length, true);
+      endView.setUint32(12, centralSize, true);
+      endView.setUint32(16, offset, true);
+      endView.setUint16(20, 0, true);
+      return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' });
+    }
+
+    function safeFileName(value) {
+      return value.replace(/[\\/:*?"<>|]/g, '_').trim() || 'photo';
+    }
+
+    function clickDownload(url, fileName) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    async function downloadBatch() {
+      if (batchItems.length < 2) return;
+      const originalIndex = currentBatchIndex;
+      const originalLabel = elements.batchDownload.textContent;
+      const entries = [];
+      elements.batchDownload.disabled = true;
+      elements.download.disabled = true;
+
+      try {
+        for (let index = 0; index < batchItems.length; index += 1) {
+          currentBatchIndex = index;
+          const item = batchItems[index];
+          sourceImage = item.image;
+          elements.canvas.width = item.image.naturalWidth;
+          elements.canvas.height = item.image.naturalHeight;
+          updateBatchStatus();
+          elements.batchDownload.textContent = `正在生成 ${index + 1} / ${batchItems.length}`;
+          render();
+          const blob = await canvasToJpeg();
+          const data = new Uint8Array(await blob.arrayBuffer());
+          const sequence = String(index + 1).padStart(3, '0');
+          const currentStamp = activeStamp();
+          const stamp = `${currentStamp.date.replaceAll('-', '')}_${currentStamp.time.replace(':', '')}`;
+          entries.push({ name: `${sequence}_${safeFileName(item.baseName)}_${stamp}.jpg`, data, stamp });
+        }
+
+        const zip = createZip(entries);
+        const zipUrl = URL.createObjectURL(zip);
+        const startStamp = entries[0].stamp;
+        clickDownload(zipUrl, `今日水印_批量_${startStamp}.zip`);
+        setTimeout(() => URL.revokeObjectURL(zipUrl), 30000);
+      } finally {
+        elements.batchDownload.textContent = originalLabel;
+        elements.batchDownload.disabled = false;
+        elements.download.disabled = false;
+        activateBatchItem(originalIndex);
+      }
+    }
+
+    setWatermarkStyle('classic', false);
+    elements.styleButtons.forEach(button => {
+      button.addEventListener('click', () => setWatermarkStyle(button.dataset.style));
+    });
+    elements.orientationButtons.forEach(button => {
+      button.addEventListener('click', () => setTemplateOrientation(button.dataset.orientation));
+    });
+
+    elements.fileInput.addEventListener('change', event => loadFiles(event.target.files));
+    elements.uploadArea.addEventListener('dragover', event => {
+      event.preventDefault();
+      elements.uploadArea.classList.add('dragging');
+    });
+    elements.uploadArea.addEventListener('dragleave', () => elements.uploadArea.classList.remove('dragging'));
+    elements.uploadArea.addEventListener('drop', event => {
+      event.preventDefault();
+      elements.uploadArea.classList.remove('dragging');
+      loadFiles(event.dataTransfer.files);
+    });
+
+    [elements.location, elements.weekday, elements.weather, elements.code]
+      .forEach(input => input.addEventListener('input', scheduleRender));
+
+    [elements.date, elements.time].forEach(input => {
+      input.addEventListener('change', generateBatchTimes);
+    });
+
+    elements.regenerateTimes.addEventListener('click', generateBatchTimes);
+
+    elements.regenerateCodes.addEventListener('click', () => {
+      if (batchItems.length < 2) {
+        elements.code.value = randomCode();
+        scheduleRender();
+        return;
+      }
+      batchItems.forEach(item => {
+        item.watermarkCode = randomCode();
+        if (item.individual) item.individual.code = item.watermarkCode;
+      });
+      updateBatchStatus();
+      scheduleRender();
+    });
+
+    elements.previousImage.addEventListener('click', () => activateBatchItem(currentBatchIndex - 1));
+    elements.nextImage.addEventListener('click', () => activateBatchItem(currentBatchIndex + 1));
+    elements.individualEdit.addEventListener('click', enableIndividualEditing);
+    elements.individualReset.addEventListener('click', resetIndividualEditing);
+
+    [
+      [elements.individualLocation, 'location'],
+      [elements.individualDate, 'date'],
+      [elements.individualTime, 'time'],
+      [elements.individualWeekday, 'weekday'],
+      [elements.individualWeather, 'weather'],
+      [elements.individualCode, 'code']
+    ].forEach(([input, property]) => {
+      input.addEventListener('input', () => {
+        const individual = activeIndividual();
+        if (!individual) return;
+        individual[property] = input.value;
+        if (property === 'date' && input.value) {
+          const parts = input.value.split('-').map(Number);
+          const date = new Date(parts[0], parts[1] - 1, parts[2]);
+          individual.weekday = weekdayValue(date);
+          elements.individualWeekday.value = individual.weekday;
+        }
+        updateBatchStatus();
+        scheduleRender();
+      });
+    });
+
+    elements.individualRandomCode.addEventListener('click', () => {
+      const individual = activeIndividual();
+      if (!individual) return;
+      individual.code = randomCode();
+      elements.individualCode.value = individual.code;
+      updateBatchStatus();
+      scheduleRender();
+    });
+
+    elements.opacity.addEventListener('input', () => {
+      elements.opacityValue.textContent = `${Math.round(Number(elements.opacity.value) * 100)}%`;
+      scheduleRender();
+    });
+
+    elements.groupTabs.forEach(button => {
+      button.addEventListener('click', () => selectGroup(button.dataset.group));
+    });
+
+    elements.groupScale.addEventListener('input', () => {
+      const layout = activeGroupState();
+      layout[selectedGroup].scale = Number(elements.groupScale.value);
+      elements.groupScaleValue.textContent = `${Math.round(layout[selectedGroup].scale * 100)}%`;
+      scheduleRender();
+    });
+
+    elements.nudgeButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const layout = activeGroupState();
+        layout[selectedGroup].x += Number(button.dataset.dx);
+        layout[selectedGroup].y += Number(button.dataset.dy);
+        scheduleRender();
+      });
+    });
+
+    elements.resetGroup.addEventListener('click', () => {
+      activeGroupState()[selectedGroup] = { x: 0, y: 0, scale: 1 };
+      selectGroup(selectedGroup);
+      scheduleRender();
+    });
+
+    elements.canvas.addEventListener('pointerdown', event => {
+      if (!sourceImage) return;
+      const point = canvasPoint(event);
+      const otherGroup = selectedGroup === 'left' ? 'right' : 'left';
+      const group = pointInBounds(point, groupBounds(selectedGroup))
+        ? selectedGroup
+        : pointInBounds(point, groupBounds(otherGroup)) ? otherGroup : null;
+      if (!group) return;
+
+      event.preventDefault();
+      selectGroup(group);
+      const layout = activeGroupState();
+      dragState = {
+        group,
+        startX: point.x,
+        startY: point.y,
+        originX: layout[group].x,
+        originY: layout[group].y
+      };
+      elements.canvas.classList.add('dragging');
+      elements.canvas.setPointerCapture(event.pointerId);
+    });
+
+    elements.canvas.addEventListener('pointermove', event => {
+      if (!dragState) return;
+      event.preventDefault();
+      const point = canvasPoint(event);
+      const baseScale = watermarkStyle === 'checkin' ? elements.canvas.width / 1664 : classicBaseScale();
+      const layout = activeGroupState();
+      layout[dragState.group].x = dragState.originX + (point.x - dragState.startX) / baseScale;
+      layout[dragState.group].y = dragState.originY + (point.y - dragState.startY) / baseScale;
+      scheduleRender();
+    });
+
+    function endGroupDrag(event) {
+      if (!dragState) return;
+      dragState = null;
+      elements.canvas.classList.remove('dragging');
+      if (elements.canvas.hasPointerCapture(event.pointerId)) {
+        elements.canvas.releasePointerCapture(event.pointerId);
+      }
+    }
+
+    elements.canvas.addEventListener('pointerup', endGroupDrag);
+    elements.canvas.addEventListener('pointercancel', endGroupDrag);
+
+    elements.canvas.addEventListener('keydown', event => {
+      const moves = {
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1]
+      };
+      if (!moves[event.key]) return;
+      event.preventDefault();
+      const step = event.shiftKey ? 10 : 2;
+      const layout = activeGroupState();
+      layout[selectedGroup].x += moves[event.key][0] * step;
+      layout[selectedGroup].y += moves[event.key][1] * step;
+      scheduleRender();
+    });
+
+    elements.refreshCode.addEventListener('click', () => {
+      if (batchItems.length > 1) {
+        const item = activeItem();
+        item.watermarkCode = randomCode();
+        if (item.individual) item.individual.code = item.watermarkCode;
+        updateBatchStatus();
+      } else {
+        elements.code.value = randomCode();
+      }
+      scheduleRender();
+    });
+
+    elements.apply.addEventListener('click', render);
+    elements.download.addEventListener('click', async () => {
+      render();
+      const originalLabel = elements.download.textContent;
+      elements.download.disabled = true;
+      elements.download.textContent = '正在生成…';
+      try {
+        const blob = await canvasToJpeg();
+        if (exportUrl) URL.revokeObjectURL(exportUrl);
+        exportUrl = URL.createObjectURL(blob);
+        const item = batchItems[currentBatchIndex];
+        const currentStamp = activeStamp();
+        const stamp = item ? `_${currentStamp.date.replaceAll('-', '')}_${currentStamp.time.replace(':', '')}` : '';
+        elements.saveLink.download = `${sourceFileName}_今日水印${stamp}.jpg`;
+        elements.saveLink.href = exportUrl;
+        elements.saveLink.hidden = false;
+        elements.saveLink.click();
+      } catch (error) {
+        elements.download.textContent = '生成失败';
+      } finally {
+        elements.download.disabled = false;
+        setTimeout(() => { elements.download.textContent = originalLabel; }, 800);
+      }
+    });
+
+    elements.batchDownload.addEventListener('click', downloadBatch);
+  </script>
+</body>
+</html>
