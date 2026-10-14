@@ -19,11 +19,22 @@
 
 ```
 ├── index.html                  # 主页面（含全部 CSS / JS，单文件）
-└── assets/
+├── download-fonts.sh           # 一键下载字体脚本
+└── assets/                     # 本地自托管字体（需运行上方脚本下载，不随仓库提交）
     ├── NotoSansCJKSC-Regular.otf  # 中文字体（常规）
     ├── NotoSansCJKSC-Bold.otf     # 中文字体（粗体）
     └── OpenSans-VF.ttf            # 数字/拉丁字体（可变字重）
 ```
+
+## 字体
+
+水印渲染依赖 3 个本地字体文件（共约 33MB，未直接提交到仓库）。克隆后运行：
+
+```bash
+bash download-fonts.sh
+```
+
+脚本会从 Adobe（Source Han Sans，即 Noto Sans CJK 同款）与 Google Fonts 官方源下载并放入 `assets/`。不下载也可运行，页面会自动回退到系统字体/Google Fonts 在线字体。
 
 ## 说明
 
