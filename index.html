@@ -779,7 +779,11 @@
       background-position: 0 0, 0 9px, 9px -9px, -9px 0;
       background-size: 18px 18px;
     }
-    .empty-state { max-width: 360px; color: #d4d4ce; }
+    .empty-state {
+      width: min(94%, 660px);
+      max-width: none;
+      color: #d4d4ce;
+    }
 
     @media (prefers-color-scheme: dark) {
       :root {
@@ -1113,9 +1117,9 @@
               <small>按参考图校准的大时间与品牌标识</small>
             </button>
             <button class="style-option" type="button" data-style="checkin" role="radio" aria-checked="false">
-              <span class="style-preview checkin"><span class="tag">打卡</span><span class="clock">23:36</span></span>
-              <strong>样式二 · 打卡卡片</strong>
-              <small>参考图中的左下角样式</small>
+              <span class="style-preview checkin"><span class="tag">水印</span><span class="clock">15:39</span></span>
+              <strong>样式二 · 水印卡片</strong>
+              <small>白底时钟、验证信息与右侧标识</small>
             </button>
           </div>
           <div class="orientation-picker">
@@ -1270,7 +1274,7 @@
 
       <section class="card preview-card" aria-label="水印预览">
         <div class="preview-stage">
-          <div class="empty-state" id="empty-state">上传照片后，这里会按参考图样式显示水印预览。</div>
+          <div class="empty-state" id="empty-state">上传照片后，水印效果会显示在这里。</div>
           <canvas id="preview-canvas" tabindex="0" aria-label="水印预览，可拖动所选水印组"></canvas>
         </div>
       </section>
@@ -1345,12 +1349,26 @@
     };
     const logoTemplate = new Image();
     let logoTemplateReady = false;
+    const checkinBrandTemplate = new Image();
+    const checkinFooterTemplate = new Image();
+    let checkinBrandReady = false;
+    let checkinFooterReady = false;
 
     logoTemplate.onload = () => {
       logoTemplateReady = true;
       scheduleRender();
     };
     logoTemplate.src = 'assets/classic-brand.png';
+    checkinBrandTemplate.onload = () => {
+      checkinBrandReady = true;
+      scheduleRender();
+    };
+    checkinFooterTemplate.onload = () => {
+      checkinFooterReady = true;
+      scheduleRender();
+    };
+    checkinBrandTemplate.src = 'assets/checkin-brand.png';
+    checkinFooterTemplate.src = 'assets/checkin-footer.png';
 
     const pad = value => String(value).padStart(2, '0');
     const today = new Date();
@@ -1379,11 +1397,11 @@
       const leftButton = elements.groupTabs.find(button => button.dataset.group === 'left');
       const rightButton = elements.groupTabs.find(button => button.dataset.group === 'right');
       const checkin = watermarkStyle === 'checkin';
-      leftButton.textContent = checkin ? '打卡水印组' : '左侧信息组';
-      rightButton.hidden = checkin;
+      leftButton.textContent = '左侧信息组';
+      rightButton.textContent = '右侧标识组';
+      rightButton.hidden = false;
       elements.orientationPicker.hidden = checkin;
-      elements.groupSwitch.classList.toggle('single', checkin);
-      if (checkin && selectedGroup === 'right') selectedGroup = 'left';
+      elements.groupSwitch.classList.remove('single');
       selectGroup(selectedGroup);
       if (shouldRender) scheduleRender();
     }
@@ -1631,14 +1649,15 @@
       const width = elements.canvas.width;
       const height = elements.canvas.height;
       const checkin = watermarkStyle === 'checkin';
-      if (checkin && group === 'right') return { left: 1, top: 1, right: 0, bottom: 0 };
-      const baseScale = checkin ? width / 1664 : classicBaseScale();
+      const baseScale = checkin ? width / 2048 : classicBaseScale();
       const state = activeGroupState()[group];
       const anchor = group === 'left'
-        ? { x: (checkin ? 30 : 22) * baseScale, y: height - (checkin ? 17 : 35) * baseScale }
-        : { x: width - 12 * baseScale, y: height - 19 * baseScale };
+        ? { x: (checkin ? 18 : 22) * baseScale, y: height - (checkin ? 18 : 35) * baseScale }
+        : { x: width - (checkin ? 13 : 12) * baseScale, y: height - (checkin ? 18 : 19) * baseScale };
       const raw = checkin
-        ? { left: 20 * baseScale, top: height - 470 * baseScale, right: Math.min(width, 720 * baseScale), bottom: height }
+        ? group === 'left'
+          ? { left: 10 * baseScale, top: height - 485 * baseScale, right: Math.min(width, 820 * baseScale), bottom: height - 15 * baseScale }
+          : { left: Math.max(0, width - 370 * baseScale), top: height - 226 * baseScale, right: width, bottom: height - 14 * baseScale }
         : group === 'left'
         ? { left: 0, top: height - 390 * baseScale, right: Math.min(width * .76, 1400 * baseScale), bottom: height }
         : { left: Math.max(0, width - 520 * baseScale), top: height - 300 * baseScale, right: width, bottom: height };
@@ -1873,66 +1892,103 @@
       ctx.shadowOffsetY = 0;
     }
 
-    function drawCheckinCardTexture(x, y, width, height, scale, variant = 'light') {
+    function paintCheckinCardTexture(paint, x, y, width, height, scale, variant = 'light') {
       const light = variant === 'light';
-      const coolFine = light ? 'rgba(70,145,178,.20)' : 'rgba(178,125,8,.035)';
-      const warmFine = light ? 'rgba(214,172,104,.08)' : 'rgba(255,244,190,.045)';
-      const coolWave = light ? 'rgba(55,133,170,.44)' : 'rgba(165,111,0,.055)';
-      const warmWave = light ? 'rgba(211,163,91,.16)' : 'rgba(255,247,205,.055)';
-      const spacing = 7 * scale;
+      const unit = Math.max(.5, scale);
+      const blueGrid = light ? 'rgba(117,187,214,.18)' : 'rgba(167,119,17,.035)';
+      const roseGrid = light ? 'rgba(205,145,161,.13)' : 'rgba(255,247,205,.035)';
+      const blueLine = light ? 'rgba(116,190,218,.50)' : 'rgba(152,105,8,.07)';
+      const roseLine = light ? 'rgba(205,143,158,.32)' : 'rgba(255,244,190,.07)';
 
-      ctx.save();
-      ctx.lineWidth = Math.max(.55, .66 * scale);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      paint.save();
+      paint.lineCap = 'round';
+      paint.lineJoin = 'round';
+      paint.lineWidth = Math.max(.52, .72 * scale);
 
-      ctx.strokeStyle = coolFine;
-      for (let offset = -height; offset < width + height; offset += spacing) {
-        ctx.beginPath();
-        ctx.moveTo(x + offset, y);
-        ctx.lineTo(x + offset + height, y + height);
-        ctx.stroke();
+      // The reference card uses a bank-note guilloche: a faint square mesh
+      // under two differently coloured families of interlaced wave lines.
+      const grid = 15 * scale;
+      paint.strokeStyle = blueGrid;
+      for (let gx = 0; gx <= width; gx += grid) {
+        paint.beginPath();
+        paint.moveTo(x + gx, y);
+        paint.lineTo(x + gx, y + height);
+        paint.stroke();
+      }
+      paint.strokeStyle = roseGrid;
+      for (let gy = 0; gy <= height; gy += grid) {
+        paint.beginPath();
+        paint.moveTo(x, y + gy);
+        paint.lineTo(x + width, y + gy);
+        paint.stroke();
       }
 
-      ctx.strokeStyle = warmFine;
-      for (let offset = -height; offset < width + height; offset += spacing) {
-        ctx.beginPath();
-        ctx.moveTo(x + offset + height, y);
-        ctx.lineTo(x + offset, y + height);
-        ctx.stroke();
-      }
-
-      ctx.strokeStyle = coolWave;
-      for (let column = -10 * scale; column <= width + 10 * scale; column += 10 * scale) {
-        ctx.beginPath();
-        for (let py = 0; py <= height; py += 2 * scale) {
-          const phase = column / (16 * scale);
+      // Cyan ribbons sweep vertically and bend inward at both ends, which
+      // produces the pale blue diamond lattice visible around the clock.
+      paint.strokeStyle = blueLine;
+      const columnGap = 12 * scale;
+      for (let column = -42 * scale; column <= width + 42 * scale; column += columnGap) {
+        const phase = column / (31 * unit);
+        paint.beginPath();
+        for (let py = -3 * scale; py <= height + 3 * scale; py += 2 * unit) {
+          const vertical = py / Math.max(height, 1);
           const px = column
-            + Math.sin(py / (5.5 * scale) + phase) * 5 * scale
-            + Math.sin(py / (2.8 * scale) - phase * .6) * 1.2 * scale;
-          if (py === 0) ctx.moveTo(x + px, y);
-          else ctx.lineTo(x + px, y + py);
+            + Math.sin(vertical * Math.PI * 2 + phase) * 31 * scale
+            + Math.sin(vertical * Math.PI * 6 - phase * .7) * 7 * scale;
+          if (py <= -3 * scale) paint.moveTo(x + px, y + py);
+          else paint.lineTo(x + px, y + py);
         }
-        ctx.stroke();
+        paint.stroke();
       }
 
-      ctx.strokeStyle = warmWave;
-      for (let row = -7 * scale; row <= height + 7 * scale; row += 7 * scale) {
-        ctx.beginPath();
-        for (let px = 0; px <= width; px += 2 * scale) {
-          const phase = row / (12 * scale);
+      // A second rose-coloured family crosses the blue ribbons at another
+      // angle. Its waves are strongest through the centre, as in the source.
+      paint.strokeStyle = roseLine;
+      const rowGap = 10 * scale;
+      for (let row = -35 * scale; row <= height + 35 * scale; row += rowGap) {
+        const phase = row / (26 * unit);
+        paint.beginPath();
+        for (let px = -3 * scale; px <= width + 3 * scale; px += 2 * unit) {
+          const horizontal = px / Math.max(width, 1);
           const py = row
-            + Math.sin(px / (8 * scale) + phase) * 3.5 * scale
-            + Math.sin(px / (3.4 * scale) - phase * .5) * 1 * scale;
-          if (px === 0) ctx.moveTo(x, y + py);
-          else ctx.lineTo(x + px, y + py);
+            + Math.sin(horizontal * Math.PI * 4 + phase) * 26 * scale
+            + Math.sin(horizontal * Math.PI * 10 - phase * .65) * 5 * scale;
+          if (px <= -3 * scale) paint.moveTo(x + px, y + py);
+          else paint.lineTo(x + px, y + py);
         }
-        ctx.stroke();
+        paint.stroke();
       }
-      ctx.restore();
+
+      // Nested Lissajous loops create the denser security rosette under the
+      // centre digits without introducing a bitmap or an external asset.
+      if (light) {
+        const centerX = x + width * .53;
+        const centerY = y + height * .52;
+        const rings = 13;
+        for (let ring = 0; ring < rings; ring += 1) {
+          const rx = (34 + ring * 7.2) * scale;
+          const ry = (18 + ring * 2.65) * scale;
+          paint.strokeStyle = ring % 2 ? 'rgba(204,139,157,.27)' : 'rgba(112,184,213,.30)';
+          paint.beginPath();
+          for (let step = 0; step <= 240; step += 1) {
+            const t = step / 240 * Math.PI * 2;
+            const px = centerX + Math.cos(t) * rx + Math.sin(t * 7 + ring * .28) * 5 * scale;
+            const py = centerY + Math.sin(t) * ry + Math.sin(t * 9 - ring * .22) * 3 * scale;
+            if (step === 0) paint.moveTo(px, py);
+            else paint.lineTo(px, py);
+          }
+          paint.closePath();
+          paint.stroke();
+        }
+      }
+      paint.restore();
     }
 
-    function drawCheckinWatermark() {
+    function drawCheckinCardTexture(x, y, width, height, scale, variant = 'light') {
+      paintCheckinCardTexture(ctx, x, y, width, height, scale, variant);
+    }
+
+    function drawLegacyCheckinWatermark() {
       if (!sourceImage) return;
       const width = elements.canvas.width;
       const height = elements.canvas.height;
@@ -2095,6 +2151,147 @@
         ctx.fillText(footerText, 0, 0);
         ctx.restore();
       });
+      ctx.restore();
+    }
+
+    function drawCheckinWatermark() {
+      if (!sourceImage) return;
+
+      const width = elements.canvas.width;
+      const height = elements.canvas.height;
+      // The supplied template is 2048×1536. All measurements below are
+      // taken from that coordinate grid, so the reference itself reproduces
+      // at 1:1 and other images scale without geometry drift.
+      const scale = width / 2048;
+      const stamp = activeStamp();
+      const content = activeContent();
+      const opacity = Number(elements.opacity.value);
+
+      ctx.save();
+      ctx.globalAlpha = opacity;
+
+      transformGroup('left', 18 * scale, height - 18 * scale, scale, () => {
+        const pillX = 18 * scale;
+        const pillY = height - 485 * scale;
+        const pillWidth = 442 * scale;
+        const pillHeight = 132 * scale;
+
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,.18)';
+        ctx.shadowBlur = 3 * scale;
+        ctx.shadowOffsetY = 1 * scale;
+        roundedRectPath(pillX, pillY, pillWidth, pillHeight, 15 * scale);
+        ctx.fillStyle = '#f8fbfb';
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.save();
+        roundedRectPath(pillX, pillY, pillWidth, pillHeight, 15 * scale);
+        ctx.clip();
+        drawCheckinCardTexture(pillX, pillY, pillWidth, pillHeight, scale, 'light');
+        ctx.restore();
+        roundedRectPath(pillX, pillY, pillWidth, pillHeight, 15 * scale);
+        ctx.strokeStyle = 'rgba(170,190,198,.94)';
+        ctx.lineWidth = 2 * scale;
+        ctx.stroke();
+        ctx.restore();
+
+        const badgeX = 35 * scale;
+        const badgeY = height - 473 * scale;
+        const badgeWidth = 160 * scale;
+        const badgeHeight = 105 * scale;
+        ctx.save();
+        roundedRectPath(badgeX, badgeY, badgeWidth, badgeHeight, 12 * scale);
+        ctx.fillStyle = 'rgb(253,195,51)';
+        ctx.fill();
+        ctx.save();
+        roundedRectPath(badgeX, badgeY, badgeWidth, badgeHeight, 12 * scale);
+        ctx.clip();
+        drawCheckinCardTexture(badgeX, badgeY, badgeWidth, badgeHeight, scale, 'badge');
+        ctx.restore();
+        ctx.fillStyle = '#050505';
+        ctx.font = chineseFont(73 * scale, 800);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('水印', badgeX + badgeWidth / 2, badgeY + badgeHeight * .51);
+        ctx.restore();
+
+        const timeText = (stamp.time || '00:00').padStart(5, '0').slice(0, 5);
+        ctx.save();
+        ctx.shadowColor = 'transparent';
+        ctx.fillStyle = 'rgb(13,66,146)';
+        ctx.font = font(112 * scale, 720);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.translate(213 * scale, height - 371 * scale);
+        ctx.scale(.78, 1.12);
+        ctx.fillText(timeText, 0, 0);
+        ctx.restore();
+
+        ctx.save();
+        ctx.fillStyle = 'rgb(253,195,39)';
+        ctx.shadowColor = 'transparent';
+        ctx.fillRect(18 * scale, height - 317 * scale, 13 * scale, 204 * scale);
+        ctx.restore();
+
+        const textX = 69 * scale;
+        const locationText = content.location || '未填写地点';
+        const locationSize = fitChineseText(locationText, (width - textX - 1050 * scale) / .92, 67 * scale, 400, 28 * scale);
+        setCheckinText(locationSize, 400, '#fff');
+        ctx.font = chineseFont(locationSize, 400);
+        ctx.save();
+        ctx.translate(textX, height - 234 * scale);
+        ctx.scale(.89, 1.04);
+        ctx.fillText(locationText, 0, 0);
+        ctx.restore();
+
+        const dateText = `${(stamp.date || '0000-00-00').replaceAll('-', '.')} ${stamp.weekday || ''}`.trim();
+        const dateSize = fitCheckinText(dateText, 805 * scale / .96, 67 * scale, 400, 28 * scale);
+        setCheckinText(dateSize, 400, '#fff');
+        ctx.font = font(dateSize, 400);
+        ctx.save();
+        ctx.translate(textX, height - 125 * scale);
+        ctx.scale(.985, 1.04);
+        ctx.fillText(dateText, 0, 0);
+        ctx.restore();
+
+        if (checkinFooterReady) {
+          ctx.drawImage(
+            checkinFooterTemplate,
+            10 * scale,
+            height - 92 * scale,
+            810 * scale,
+            77 * scale
+          );
+        } else {
+          setCheckinText(42 * scale, 400, '#afb3ba');
+          ctx.fillText('◇  今日水印相机已验证 | 时间地点真实', 18 * scale, height - 27 * scale);
+        }
+      });
+
+      transformGroup('right', width - 13 * scale, height - 18 * scale, scale, () => {
+        if (checkinBrandReady) {
+          ctx.drawImage(
+            checkinBrandTemplate,
+            width - 368 * scale,
+            height - 228 * scale,
+            359 * scale,
+            156 * scale
+          );
+        } else {
+          drawBrand(width - 13 * scale, height - 154 * scale, scale);
+          drawSubBrand(width - 13 * scale, height - 78 * scale, scale);
+        }
+
+        const codeText = `防伪 ${content.code || randomCode()}`;
+        setCheckinText(27 * scale, 700, '#fff', 'right');
+        ctx.font = font(27 * scale, 700);
+        ctx.save();
+        ctx.translate(width - 9 * scale, height - 21 * scale);
+        ctx.scale(1.21, 1);
+        ctx.fillText(codeText, 0, 0);
+        ctx.restore();
+      });
+
       ctx.restore();
     }
 
@@ -2483,7 +2680,7 @@
       if (!dragState) return;
       event.preventDefault();
       const point = canvasPoint(event);
-      const baseScale = watermarkStyle === 'checkin' ? elements.canvas.width / 1664 : classicBaseScale();
+      const baseScale = watermarkStyle === 'checkin' ? elements.canvas.width / 2048 : classicBaseScale();
       const layout = activeGroupState();
       layout[dragState.group].x = dragState.originX + (point.x - dragState.startX) / baseScale;
       layout[dragState.group].y = dragState.originY + (point.y - dragState.startY) / baseScale;
